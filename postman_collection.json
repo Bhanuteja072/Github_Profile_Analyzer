@@ -1,0 +1,49 @@
+{
+  "info": {
+    "name": "GitHub Profile Analyzer API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/"
+      }
+    },
+    {
+      "name": "Analyze Profile",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"octocat\"\n}"
+        },
+        "url": "{{baseUrl}}/api/profiles/analyze"
+      }
+    },
+    {
+      "name": "Get All Profiles",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/profiles"
+      }
+    },
+    {
+      "name": "Get Profile By Username",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/profiles/octocat"
+      }
+    }
+  ]
+}
