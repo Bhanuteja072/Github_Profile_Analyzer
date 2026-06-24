@@ -1,34 +1,48 @@
 const mysql = require('mysql2/promise');
 require('dotenv').config();
-
+ 
+const useSSL = process.env.DB_SSL === 'true';
+const sslOption = useSSL ? { ssl: { rejectUnauthorized: false } } : {};
+ 
 /**
  * Ensures the database and table exist before the app starts.
  * This lets a reviewer just clone the repo, set .env, and run `npm start`
  * without manually executing schema.sql first.
  */
 async function initDb() {
-  // Step 1: connect WITHOUT specifying a database, so we can create it if missing
-  const connection = await mysql.createConnection({
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT || 3306,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD
-  });
-
-  await connection.query(
-    `CREATE DATABASE IF NOT EXISTS \`${process.env.DB_NAME}\``
-  );
-  await connection.end();
-
+  // Step 1: try to create the database if it doesn't exist yet.
+  // Skipped/ignored on hosted providers (Aiven, PlanetScale, etc.) where the
+  // database already exists and the user lacks CREATE DATABASE privileges —
+  // that's expected there, so we just continue to Step 2.
+  try {
+    const connection = await mysql.createConnection({
+      host: process.env.DB_HOST,
+      port: process.env.DB_PORT || 3306,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      ...sslOption
+    });
+ 
+    await connection.query(
+      `CREATE DATABASE IF NOT EXISTS \`${process.env.DB_NAME}\``
+    );
+    await connection.end();
+  } catch (err) {
+    console.warn(
+      `⚠️  Skipped CREATE DATABASE step (likely already exists or no permission): ${err.message}`
+    );
+  }
+ 
   // Step 2: connect to that database and create the table if missing
   const dbConnection = await mysql.createConnection({
     host: process.env.DB_HOST,
     port: process.env.DB_PORT || 3306,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME
+    database: process.env.DB_NAME,
+    ...sslOption
   });
-
+ 
   await dbConnection.query(`
     CREATE TABLE IF NOT EXISTS profiles (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -53,9 +67,9 @@ async function initDb() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     )
   `);
-
+ 
   await dbConnection.end();
   console.log('✅ Database and table verified/created successfully.');
 }
-
+ 
 module.exports = initDb;
